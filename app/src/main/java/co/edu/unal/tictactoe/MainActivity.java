@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -36,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private BoardView mBoardView;
     MediaPlayer mHumanMediaPlayer;
     MediaPlayer mComputerMediaPlayer;
+    private SharedPreferences mPrefs;
 
     @Override
     protected void onResume() {
@@ -132,6 +134,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putCharArray("board", mGame.getmBoard());
+        outState.putBoolean("mGameOver", GameOver);
+        outState.putInt("mHumanWins", Integer.valueOf(humanSc));
+        outState.putInt("mComputerWins", Integer.valueOf(androidScore));
+        outState.putInt("mTies", Integer.valueOf(empateScore));
+        outState.putCharSequence("info", mInfoTextView.getText());
+        outState.putChar("mGoFirst", humanStarts?'h':'a');
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+// Save the current scores
+        SharedPreferences.Editor ed = mPrefs.edit();
+        ed.putInt("mHumanWins", humanSc);
+        ed.putInt("mComputerWins", androidScore);
+        ed.putInt("mTies", empateScore);
+        ed.commit();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mGame= new TicTacToeGame();
@@ -151,7 +176,26 @@ public class MainActivity extends AppCompatActivity {
         humanStarts=true;
         toast = Toast.makeText(this,"",Toast.LENGTH_SHORT);
         selected = 0;
-        startNewGame();
+        mPrefs = getSharedPreferences("ttt_prefs", MODE_PRIVATE);
+
+        humanSc = mPrefs.getInt("mHumanWins", 0);
+        androidScore = mPrefs.getInt("mComputerWins", 0);
+        empateScore = mPrefs.getInt("mTies", 0);
+        if (savedInstanceState == null) {
+            startNewGame();
+        }
+        else {
+// Restore the game's state
+            mGame.setmBoard(savedInstanceState.getCharArray("board"));
+            GameOver = savedInstanceState.getBoolean("mGameOver");
+            mInfoTextView.setText(savedInstanceState.getCharSequence("info"));
+            humanSc = savedInstanceState.getInt("mHumanWins");
+            androidScore = savedInstanceState.getInt("mComputerWins");
+            empateScore = savedInstanceState.getInt("mTies");
+            humanStarts = savedInstanceState.getChar("mGoFirst")=='h'?true:false;
+
+        }
+        displayScores();
     }
 
     private View.OnTouchListener mTouchListener = new View.OnTouchListener() {
@@ -165,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
                 int winner = mGame.checkForWinner();
                 if (winner == 0 ) {
                     final Handler handler = new Handler();
+                    mBoardView.setEnabled(false);
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -173,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
                             setMove(TicTacToeGame.COMPUTER_PLAYER, move);
                             mComputerMediaPlayer.start();
                             mBoardView.invalidate();
+                            mBoardView.setEnabled(true);
                         }
                     }, 2000);
                     mInfoTextView.setText("It's Android's turn.");
@@ -214,6 +260,24 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
     };
+
+    private void displayScores() {
+        human.setText(Integer.toString(humanSc));
+        pcScore.setText(Integer.toString(androidScore));
+        empate.setText(Integer.toString(empateScore));
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        mGame.setmBoard(savedInstanceState.getCharArray("board"));
+        GameOver = savedInstanceState.getBoolean("mGameOver");
+        mInfoTextView.setText(savedInstanceState.getCharSequence("info"));
+        humanSc = savedInstanceState.getInt("mHumanWins");
+        androidScore = savedInstanceState.getInt("mComputerWins");
+        empateScore = savedInstanceState.getInt("mTies");
+        humanStarts = savedInstanceState.getChar("mGoFirst")=='h'?true:false;
+    }
 
     private void startNewGame() {
         mGame.clearBoard();

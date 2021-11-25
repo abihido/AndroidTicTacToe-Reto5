@@ -46,6 +46,13 @@ public class TicTacToeGame {
         }
     }
 
+    public char[] getmBoard() {
+        return mBoard;
+    }
+
+    public void setmBoard(char[] mBoard) {
+        this.mBoard = mBoard;
+    }
 
     // Check for a winner.  Return
     //  0 if no winner or tie yet
